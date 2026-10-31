@@ -4,6 +4,7 @@ import { Button } from '../../components/Button';
 import { Badge } from '../../components/Badge';
 import { Card } from '../../components/Card';
 import { PathStepper } from '../../components/PathStepper';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import {
   ArrowLeft,
   Repeat,
@@ -15,8 +16,12 @@ import {
   History,
   FileText,
   Clock,
-  ShieldCheck,
+  Play,
+  Pause,
+  Send,
   CheckCircle2,
+  XCircle,
+  RefreshCw,
 } from 'lucide-react';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -30,23 +35,48 @@ export const SubscriptionDetailPage = () => {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('lines');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    action: null,
+    variant: 'primary',
+  });
+
+  const fetchSubscription = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/subscriptions/${id}`);
+      const data = res?.data || res;
+      setSubscription(data);
+    } catch (err) {
+      toast.error('Failed to load subscription details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSubscription = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get(`/subscriptions/${id}`);
-        const data = res?.data || res;
-        setSubscription(data);
-      } catch (err) {
-        toast.error('Failed to load subscription details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSubscription();
   }, [id]);
+
+  const handleAction = async (actionEndpoint) => {
+    try {
+      setActionLoading(true);
+      await api.post(`/subscriptions/${id}/${actionEndpoint}`);
+      toast.success('Subscription status updated successfully');
+      setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      const res = await api.get(`/subscriptions/${id}`);
+      setSubscription(res?.data || res);
+    } catch (err) {
+      // toast error handled by api interceptor
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -78,11 +108,19 @@ export const SubscriptionDetailPage = () => {
       case 'QUOTATION':
         return <Badge variant="info">Quotation</Badge>;
       case 'CONFIRMED':
-        return <Badge variant="info" className="bg-indigo-50 text-indigo-700 border-indigo-200">Confirmed</Badge>;
+        return (
+          <Badge variant="info" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+            Confirmed
+          </Badge>
+        );
       case 'ACTIVE':
         return <Badge variant="success">Active</Badge>;
       case 'CLOSED':
-        return <Badge variant="neutral" className="bg-slate-200 text-slate-800">Closed</Badge>;
+        return (
+          <Badge variant="neutral" className="bg-slate-200 text-slate-800">
+            Closed
+          </Badge>
+        );
       default:
         return <Badge variant="neutral">{status}</Badge>;
     }
@@ -91,6 +129,20 @@ export const SubscriptionDetailPage = () => {
   const lines = subscription.lines || [];
   const history = subscription.history || [];
   const totals = subscription.totals || { subtotal: '0.00', taxTotal: '0.00', total: '0.00' };
+
+  // Compute next action label for PathStepper
+  let nextActionLabel = null;
+  let onNextAction = null;
+  if (subscription.status === 'DRAFT') {
+    nextActionLabel = 'Send Quotation';
+    onNextAction = () => handleAction('send-quotation');
+  } else if (subscription.status === 'QUOTATION') {
+    nextActionLabel = 'Confirm Subscription';
+    onNextAction = () => handleAction('confirm');
+  } else if (subscription.status === 'CONFIRMED') {
+    nextActionLabel = 'Activate Subscription';
+    onNextAction = () => handleAction('activate');
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -118,8 +170,167 @@ export const SubscriptionDetailPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center flex-wrap gap-2">
             {getStatusBadge(subscription.status, subscription.is_paused)}
+
+            {/* Dynamic Lifecycle Action Buttons */}
+            {subscription.status === 'DRAFT' && (
+              <>
+                <Button
+                  size="sm"
+                  icon={Send}
+                  loading={actionLoading}
+                  onClick={() => handleAction('send-quotation')}
+                >
+                  Send Quotation
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={actionLoading}
+                  className="text-status-danger border-status-danger/30 hover:bg-status-danger-soft"
+                  onClick={() =>
+                    setConfirmDialog({
+                      isOpen: true,
+                      title: 'Discard Draft Subscription',
+                      message: `Are you sure you want to discard and close subscription ${subscription.number}?`,
+                      action: () => handleAction('close'),
+                      variant: 'danger',
+                    })
+                  }
+                >
+                  Discard
+                </Button>
+              </>
+            )}
+
+            {subscription.status === 'QUOTATION' && (
+              <>
+                <Button
+                  size="sm"
+                  icon={CheckCircle2}
+                  loading={actionLoading}
+                  onClick={() => handleAction('confirm')}
+                >
+                  Confirm Contract
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={actionLoading}
+                  className="text-status-danger border-status-danger/30 hover:bg-status-danger-soft"
+                  onClick={() =>
+                    setConfirmDialog({
+                      isOpen: true,
+                      title: 'Reject / Close Quotation',
+                      message: `Are you sure you want to reject and close quotation ${subscription.number}?`,
+                      action: () => handleAction('close'),
+                      variant: 'danger',
+                    })
+                  }
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+
+            {subscription.status === 'CONFIRMED' && (
+              <Button
+                size="sm"
+                icon={Play}
+                loading={actionLoading}
+                onClick={() => handleAction('activate')}
+              >
+                Activate Subscription
+              </Button>
+            )}
+
+            {subscription.status === 'ACTIVE' && (
+              <>
+                {subscription.is_paused ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={Play}
+                    loading={actionLoading}
+                    onClick={() => handleAction('resume')}
+                  >
+                    Resume Subscription
+                  </Button>
+                ) : (
+                  subscription.plan_pausable && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      icon={Pause}
+                      loading={actionLoading}
+                      onClick={() => handleAction('pause')}
+                    >
+                      Pause
+                    </Button>
+                  )
+                )}
+
+                {subscription.plan_closable && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-status-danger border-status-danger/30 hover:bg-status-danger-soft"
+                    loading={actionLoading}
+                    onClick={() =>
+                      setConfirmDialog({
+                        isOpen: true,
+                        title: 'Close Subscription Early',
+                        message: `Are you sure you want to terminate subscription ${subscription.number} early? This plan permits early closure.`,
+                        action: () => handleAction('close'),
+                        variant: 'danger',
+                      })
+                    }
+                  >
+                    Close Early
+                  </Button>
+                )}
+
+                {subscription.plan_renewable && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    icon={RefreshCw}
+                    loading={actionLoading}
+                    onClick={() =>
+                      setConfirmDialog({
+                        isOpen: true,
+                        title: 'Renew Subscription',
+                        message: `Renew subscription ${subscription.number} for another term? Expiry date will be extended by the plan period.`,
+                        action: () => handleAction('renew'),
+                        variant: 'primary',
+                      })
+                    }
+                  >
+                    Renew
+                  </Button>
+                )}
+              </>
+            )}
+
+            {subscription.status === 'CLOSED' && subscription.plan_renewable && (
+              <Button
+                size="sm"
+                icon={RefreshCw}
+                loading={actionLoading}
+                onClick={() =>
+                  setConfirmDialog({
+                    isOpen: true,
+                    title: 'Reopen & Renew Subscription',
+                    message: `Reopen closed subscription ${subscription.number} back to Active status and extend the contract term?`,
+                    action: () => handleAction('renew'),
+                    variant: 'primary',
+                  })
+                }
+              >
+                Renew Contract
+              </Button>
+            )}
           </div>
         </div>
 
@@ -136,7 +347,8 @@ export const SubscriptionDetailPage = () => {
           <div>
             <span className="text-[11px] text-surface-muted block font-medium">Term Period</span>
             <span className="font-medium text-surface-text">
-              {subscription.start_date} {subscription.expiry_date ? `to ${subscription.expiry_date}` : '(Open)'}
+              {subscription.start_date}{' '}
+              {subscription.expiry_date ? `to ${subscription.expiry_date}` : '(Open)'}
             </span>
           </div>
           <div>
@@ -158,6 +370,8 @@ export const SubscriptionDetailPage = () => {
         currentStep={
           subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1).toLowerCase()
         }
+        actionButtonLabel={nextActionLabel}
+        onActionClick={onNextAction}
       />
 
       {/* Two-Column Grid */}
@@ -220,14 +434,21 @@ export const SubscriptionDetailPage = () => {
                     </thead>
                     <tbody className="divide-y divide-surface-border">
                       {lines.map((l) => (
-                        <tr key={l.id} className="h-12 hover:bg-surface-canvas/50 transition-colors">
+                        <tr
+                          key={l.id}
+                          className="h-12 hover:bg-surface-canvas/50 transition-colors"
+                        >
                           <td className="py-3 font-medium text-surface-text">
                             <div>{l.description}</div>
                             {l.product_type && (
-                              <span className="text-[11px] text-surface-muted">{l.product_type}</span>
+                              <span className="text-[11px] text-surface-muted">
+                                {l.product_type}
+                              </span>
                             )}
                           </td>
-                          <td className="py-3 text-center tabular-nums font-semibold">{l.quantity}</td>
+                          <td className="py-3 text-center tabular-nums font-semibold">
+                            {l.quantity}
+                          </td>
                           <td className="py-3 text-right tabular-nums">
                             ₹{parseFloat(l.unit_price).toFixed(2)}
                           </td>
@@ -269,7 +490,9 @@ export const SubscriptionDetailPage = () => {
                               <Clock className="w-3.5 h-3.5" />
                               <span>{new Date(event.changed_at).toLocaleString()}</span>
                               {event.changed_by_name && (
-                                <span>• by {event.changed_by_name} ({event.changed_by_role})</span>
+                                <span>
+                                  • by {event.changed_by_name} ({event.changed_by_role})
+                                </span>
                               )}
                             </div>
                           </div>
@@ -373,9 +596,19 @@ export const SubscriptionDetailPage = () => {
           </Card>
         </div>
       </div>
+
+      {/* Confirm Action Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDialog.action}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmVariant={confirmDialog.variant}
+        loading={actionLoading}
+      />
     </div>
   );
 };
 
 export default SubscriptionDetailPage;
-
