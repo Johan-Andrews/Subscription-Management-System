@@ -5,6 +5,47 @@ const { sendMail } = require('../../lib/mailer');
 const { generateInvoicePdfBuffer } = require('./pdf.service');
 
 /**
+ * Format invoice row to include both snake_case and camelCase fields
+ */
+function formatInvoiceRow(row) {
+  if (!row) return row;
+  const isOverdue = Boolean(row.is_overdue);
+  const daysOverdue = Number(row.days_overdue) || 0;
+  const outstandingBalance = Number(row.outstanding_balance) || 0;
+
+  return {
+    ...row,
+    customerId: row.customer_id,
+    subscriptionId: row.subscription_id,
+    periodStart: row.period_start,
+    periodEnd: row.period_end,
+    issueDate: row.issue_date,
+    dueDate: row.due_date,
+    discountTotal: row.discount_total,
+    taxTotal: row.tax_total,
+    amountPaid: row.amount_paid,
+    sentAt: row.sent_at,
+    confirmedAt: row.confirmed_at,
+    paidAt: row.paid_at,
+    cancelledAt: row.cancelled_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    customerName: row.customer_name,
+    customerEmail: row.customer_email,
+    customerCompany: row.customer_company,
+    customerPhone: row.customer_phone,
+    customerAddress: row.customer_address,
+    subscriptionNumber: row.subscription_number,
+    isOverdue,
+    daysOverdue,
+    outstandingBalance,
+    is_overdue: isOverdue,
+    days_overdue: daysOverdue,
+    outstanding_balance: outstandingBalance,
+  };
+}
+
+/**
  * List invoices with filters and pagination
  */
 async function listInvoices({ user, filters = {}, paging = {} }) {
@@ -21,9 +62,15 @@ async function listInvoices({ user, filters = {}, paging = {} }) {
     conditions.push(`i.customer_id = $${paramIdx++}`);
     params.push(user.customerId);
 
-    if (filters.status && ['CONFIRMED', 'PAID'].includes(filters.status.toUpperCase())) {
-      conditions.push(`i.status = $${paramIdx++}`);
-      params.push(filters.status.toUpperCase());
+    if (filters.status) {
+      const upperStatus = String(filters.status).toUpperCase();
+      if (['CONFIRMED', 'PAID'].includes(upperStatus)) {
+        conditions.push(`i.status = $${paramIdx++}`);
+        params.push(upperStatus);
+      } else {
+        // Customer requested a status they are not permitted to see
+        conditions.push('1 = 0');
+      }
     } else {
       conditions.push(`i.status IN ('CONFIRMED', 'PAID')`);
     }
@@ -54,9 +101,13 @@ async function listInvoices({ user, filters = {}, paging = {} }) {
     params.push(filters.to);
   }
 
-  const isOverdueFilter = String(filters.overdue).toLowerCase() === 'true' || filters.overdue === true || filters.overdue === '1';
-  if (isOverdueFilter) {
-    conditions.push(`i.status = 'CONFIRMED' AND i.due_date < CURRENT_DATE`);
+  if (filters.overdue !== undefined && filters.overdue !== null && filters.overdue !== '') {
+    const isOverdue = String(filters.overdue).toLowerCase() === 'true' || filters.overdue === true || filters.overdue === '1';
+    if (isOverdue) {
+      conditions.push(`i.status = 'CONFIRMED' AND i.due_date < CURRENT_DATE`);
+    } else if (String(filters.overdue).toLowerCase() === 'false' || filters.overdue === false || filters.overdue === '0') {
+      conditions.push(`NOT (i.status = 'CONFIRMED' AND i.due_date < CURRENT_DATE)`);
+    }
   }
 
   if (filters.search && filters.search.trim()) {
@@ -124,8 +175,9 @@ async function listInvoices({ user, filters = {}, paging = {} }) {
   `;
 
   const dataRes = await query(dataSql, [...params, limit, offset]);
+  const formattedRows = dataRes.rows.map(formatInvoiceRow);
 
-  return pageResult(dataRes.rows, page, pageSize, total);
+  return pageResult(formattedRows, page, pageSize, total);
 }
 
 /**
@@ -247,8 +299,36 @@ async function getInvoiceById({ id, user }) {
   `;
   const paymentsRes = await query(paymentsSql, [id]);
 
+  const formattedBase = formatInvoiceRow(raw);
+
+  const formattedLines = linesRes.rows.map((l) => ({
+    ...l,
+    productId: l.product_id,
+    invoiceId: l.invoice_id,
+    unitPrice: l.unit_price,
+    discountAmount: l.discount_amount,
+    taxRate: l.tax_rate,
+    taxType: l.tax_type,
+    taxAmount: l.tax_amount,
+    productName: l.product_name,
+  }));
+
+  const formattedDiscounts = discountsRes.rows.map((d) => ({
+    ...d,
+    invoiceId: d.invoice_id,
+    discountId: d.discount_id,
+  }));
+
+  const formattedPayments = paymentsRes.rows.map((p) => ({
+    ...p,
+    invoiceId: p.invoice_id,
+    paidOn: p.paid_on,
+    voidReason: p.void_reason,
+    createdAt: p.created_at,
+  }));
+
   const invoice = {
-    ...raw,
+    ...formattedBase,
     customer: {
       id: raw.customer_id,
       name: raw.customer_name,
@@ -257,9 +337,11 @@ async function getInvoiceById({ id, user }) {
       company: raw.customer_company,
       address: raw.customer_address,
     },
-    lines: linesRes.rows,
-    discounts: discountsRes.rows,
-    payments: paymentsRes.rows,
+    lines: formattedLines,
+    discounts: formattedDiscounts,
+    discount: formattedDiscounts[0] || null,
+    appliedDiscount: formattedDiscounts[0] || null,
+    payments: formattedPayments,
   };
 
   return invoice;
@@ -290,7 +372,7 @@ async function confirmInvoice({ id }) {
     RETURNING *
   `;
   const res = await query(updateSql, [id]);
-  return res.rows[0];
+  return formatInvoiceRow(res.rows[0]);
 }
 
 /**
@@ -325,6 +407,7 @@ async function confirmBulkInvoices({ ids } = {}) {
   return {
     confirmedCount: res.rowCount,
     confirmedIds: res.rows.map((r) => r.id),
+    confirmedNumbers: res.rows.map((r) => r.number),
   };
 }
 
@@ -365,7 +448,7 @@ async function cancelInvoice({ id }) {
     RETURNING *
   `;
   const res = await query(updateSql, [id]);
-  return res.rows[0];
+  return formatInvoiceRow(res.rows[0]);
 }
 
 /**
@@ -445,7 +528,7 @@ async function sendInvoiceEmail({ id, user }) {
   return {
     sent: true,
     sentAt: updateRes.rows[0].sent_at,
-    invoice: updateRes.rows[0],
+    invoice: formatInvoiceRow(updateRes.rows[0]),
   };
 }
 
