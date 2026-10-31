@@ -35,13 +35,8 @@ export const LoginPage = () => {
         return;
       }
 
-      // Check role from profile or metadata
-      const userRole = data?.user?.user_metadata?.role;
-      if (userRole === 'CUSTOMER') {
-        navigate('/portal/subscriptions', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      // Redirect to root, where RootRedirect sends user to their role-based active home
+      navigate('/', { replace: true });
     } catch (err) {
       const msg = err.message || 'Invalid email or password';
       setError(msg);
@@ -131,3 +126,4 @@ export const LoginPage = () => {
 };
 
 export default LoginPage;
+

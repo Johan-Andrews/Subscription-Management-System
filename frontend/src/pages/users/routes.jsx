@@ -37,4 +37,10 @@ export const navItems = [
     roles: ['ADMIN'],
     group: 'Admin',
   },
+  {
+    label: 'Profile',
+    path: '/portal/profile',
+    roles: ['CUSTOMER'],
+    group: 'Account',
+  },
 ];

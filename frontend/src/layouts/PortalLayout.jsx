@@ -3,17 +3,25 @@ import { NavLink, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { LogOut, ChevronDown, Repeat, FileText, CreditCard, User } from 'lucide-react';
 
-export const PortalLayout = () => {
+export const PortalLayout = ({ navItems = [] }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const portalNav = [
-    { label: 'My Subscriptions', path: '/portal/subscriptions', icon: Repeat },
-    { label: 'My Invoices', path: '/portal/invoices', icon: FileText },
-    { label: 'Payments', path: '/portal/payments', icon: CreditCard },
-    { label: 'Profile', path: '/portal/profile', icon: User },
-  ];
+  // Dynamic portal navigation items from registered modules only
+  const visiblePortalNav = navItems.filter(
+    (item) => item.roles?.includes('CUSTOMER') || item.path?.startsWith('/portal')
+  );
+
+  const getPortalIcon = (path = '', label = '') => {
+    const l = label.toLowerCase();
+    const p = path.toLowerCase();
+    if (p.includes('subscrip') || l.includes('subscrip')) return Repeat;
+    if (p.includes('invoice') || l.includes('invoice')) return FileText;
+    if (p.includes('pay') || l.includes('pay')) return CreditCard;
+    if (p.includes('profile') || l.includes('profile') || l.includes('user')) return User;
+    return User;
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -35,23 +43,27 @@ export const PortalLayout = () => {
             </span>
           </div>
 
-          {/* Nav links */}
+          {/* Dynamic registered Nav links */}
           <nav className="hidden md:flex items-center gap-1">
-            {portalNav.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `px-3.5 py-2 rounded-full text-[14px] font-medium transition-colors ${
-                    isActive
-                      ? 'bg-brand-soft text-brand font-semibold'
-                      : 'text-surface-muted hover:text-surface-text hover:bg-surface-canvas'
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {visiblePortalNav.map((item) => {
+              const Icon = item.icon || getPortalIcon(item.path, item.label);
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3.5 py-2 rounded-full text-[14px] font-medium transition-colors ${
+                      isActive
+                        ? 'bg-brand-soft text-brand font-semibold'
+                        : 'text-surface-muted hover:text-surface-text hover:bg-surface-canvas'
+                    }`
+                  }
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
         </div>
 
@@ -97,4 +109,3 @@ export const PortalLayout = () => {
 };
 
 export default PortalLayout;
-
