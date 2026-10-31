@@ -5,5 +5,6 @@ const router = express.Router();
 router.use(require('./taxes.routes'));
 router.use(require('./products.routes'));
 router.use(require('./plans.routes'));
+router.use(require('./discounts.routes'));
 
 module.exports = router;
