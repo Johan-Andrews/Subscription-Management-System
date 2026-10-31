@@ -7,7 +7,7 @@ import { Table } from '../../components/Table';
 import { Modal } from '../../components/Modal';
 import { Input } from '../../components/Input';
 import { Badge } from '../../components/Badge';
-import { UserPlus, Shield, Check, Circle, Power } from 'lucide-react';
+import { UserPlus, Shield, Check, Circle, Power, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const StaffListPage = () => {
@@ -16,11 +16,18 @@ export const StaffListPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Form states
+  // Form states (Create)
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState('');
+
+  // Form states (Edit)
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [updating, setUpdating] = useState(false);
+  const [editError, setEditError] = useState('');
 
   // Password rules
   const rules = [
@@ -100,6 +107,34 @@ export const StaffListPage = () => {
     }
   };
 
+  const handleOpenEdit = (member) => {
+    setEditingStaff(member);
+    setEditFullName(member.fullName || '');
+    setEditError('');
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateStaff = async (e) => {
+    e.preventDefault();
+    setEditError('');
+    setUpdating(true);
+    try {
+      await api.patch(`/users/staff/${editingStaff.id}`, {
+        fullName: editFullName,
+      });
+      toast.success('Staff member updated successfully');
+      setEditModalOpen(false);
+      setStaff((prev) =>
+        prev.map((s) => (s.id === editingStaff.id ? { ...s, fullName: editFullName } : s))
+      );
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to update staff';
+      setEditError(msg);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const columns = [
     {
       header: 'Staff Member',
@@ -150,15 +185,26 @@ export const StaffListPage = () => {
       cellClassName: 'text-right',
       render: (row) =>
         row.role !== 'ADMIN' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleToggleActive(row)}
-            className="text-[12px]"
-          >
-            <Power className="w-3.5 h-3.5 mr-1" />
-            {row.isActive ? 'Deactivate' : 'Activate'}
-          </Button>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenEdit(row)}
+              className="text-[12px]"
+            >
+              <Edit2 className="w-3.5 h-3.5 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant={row.isActive ? 'outline' : 'secondary'}
+              size="sm"
+              onClick={() => handleToggleActive(row)}
+              className="text-[12px]"
+            >
+              <Power className="w-3.5 h-3.5 mr-1" />
+              {row.isActive ? 'Deactivate' : 'Activate'}
+            </Button>
+          </div>
         ),
     },
   ];
@@ -268,6 +314,48 @@ export const StaffListPage = () => {
               disabled={!allRulesPassed}
             >
               Create Staff
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Staff Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Staff Member"
+        subtitle={`Update account details for ${editingStaff?.email || ''}`}
+      >
+        {editError && (
+          <div className="mb-4 p-3 rounded-[8px] bg-status-danger-soft border border-status-danger/20 text-[13px] text-status-danger">
+            {editError}
+          </div>
+        )}
+
+        <form onSubmit={handleUpdateStaff} className="space-y-4">
+          <Input
+            label="Full Name"
+            name="editFullName"
+            placeholder="John Smith"
+            value={editFullName}
+            onChange={(e) => setEditFullName(e.target.value)}
+            required
+            autoFocus
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={updating}
+            >
+              Save Changes
             </Button>
           </div>
         </form>
