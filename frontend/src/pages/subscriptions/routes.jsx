@@ -4,8 +4,11 @@ import SubscriptionsListPage from './SubscriptionsListPage';
 import SubscriptionCreatePage from './SubscriptionCreatePage';
 import SubscriptionDetailPage from './SubscriptionDetailPage';
 import BillingPage from './BillingPage';
+import PortalSubscriptionsListPage from './portal/PortalSubscriptionsListPage';
+import PortalSubscriptionDetailPage from './portal/PortalSubscriptionDetailPage';
 
 export const routes = [
+  // Admin & Staff routes
   {
     path: '/subscriptions',
     element: <SubscriptionsListPage />,
@@ -36,9 +39,24 @@ export const routes = [
     area: 'admin',
     roles: ['ADMIN', 'STAFF'],
   },
+
+  // Customer Portal routes
+  {
+    path: '/portal/subscriptions',
+    element: <PortalSubscriptionsListPage />,
+    area: 'portal',
+    roles: ['CUSTOMER'],
+  },
+  {
+    path: '/portal/subscriptions/:id',
+    element: <PortalSubscriptionDetailPage />,
+    area: 'portal',
+    roles: ['CUSTOMER'],
+  },
 ];
 
 export const navItems = [
+  // Admin & Staff nav
   {
     label: 'Subscriptions',
     path: '/subscriptions',
@@ -53,5 +71,12 @@ export const navItems = [
     label: 'Billing',
     path: '/billing',
     roles: ['ADMIN', 'STAFF'],
+  },
+
+  // Customer Portal nav
+  {
+    label: 'My Subscriptions',
+    path: '/portal/subscriptions',
+    roles: ['CUSTOMER'],
   },
 ];
