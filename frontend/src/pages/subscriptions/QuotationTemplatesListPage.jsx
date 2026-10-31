@@ -275,3 +275,4 @@ export const QuotationTemplatesListPage = () => {
 };
 
 export default QuotationTemplatesListPage;
+
