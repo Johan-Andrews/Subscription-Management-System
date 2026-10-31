@@ -42,3 +42,4 @@ export const PasswordChecklist = ({ password = '', title = 'Requirements:' }) =>
 };
 
 export default PasswordChecklist;
+
