@@ -9,6 +9,7 @@ const { notFound, badRequest, conflict, forbidden } = require('../../lib/errors'
 const { parsePaging, pageResult } = require('../../lib/pagination');
 const { toPaise, fromPaise, mulPaise, percentOf } = require('../../lib/money');
 const pricingService = require('../catalog/pricing.service');
+const { transition } = require('./subscription.lifecycle');
 
 const router = express.Router();
 
@@ -795,6 +796,107 @@ router.patch(
       return updatedSub;
     });
 
+    res.json({ data: updated });
+  })
+);
+
+/**
+ * POST /api/subscriptions/:id/send-quotation
+ * Moves DRAFT -> QUOTATION
+ */
+router.post(
+  '/:id/send-quotation',
+  requireRole('ADMIN', 'STAFF'),
+  asyncHandler(async (req, res) => {
+    const updated = await withTransaction((client) =>
+      transition(client, req.params.id, 'send_quotation', req.user)
+    );
+    res.json({ data: updated });
+  })
+);
+
+/**
+ * POST /api/subscriptions/:id/confirm
+ * Moves QUOTATION -> CONFIRMED, sets next_billing_date = start_date
+ */
+router.post(
+  '/:id/confirm',
+  requireRole('ADMIN', 'STAFF'),
+  asyncHandler(async (req, res) => {
+    const updated = await withTransaction((client) =>
+      transition(client, req.params.id, 'confirm', req.user)
+    );
+    res.json({ data: updated });
+  })
+);
+
+/**
+ * POST /api/subscriptions/:id/activate
+ * Moves CONFIRMED -> ACTIVE
+ */
+router.post(
+  '/:id/activate',
+  requireRole('ADMIN', 'STAFF'),
+  asyncHandler(async (req, res) => {
+    const updated = await withTransaction((client) =>
+      transition(client, req.params.id, 'activate', req.user)
+    );
+    res.json({ data: updated });
+  })
+);
+
+/**
+ * POST /api/subscriptions/:id/close
+ * Moves to CLOSED (checks plan.closable if closing active early)
+ */
+router.post(
+  '/:id/close',
+  asyncHandler(async (req, res) => {
+    const updated = await withTransaction((client) =>
+      transition(client, req.params.id, 'close', req.user)
+    );
+    res.json({ data: updated });
+  })
+);
+
+/**
+ * POST /api/subscriptions/:id/pause
+ * Pauses an ACTIVE subscription (requires plan.pausable)
+ */
+router.post(
+  '/:id/pause',
+  asyncHandler(async (req, res) => {
+    const updated = await withTransaction((client) =>
+      transition(client, req.params.id, 'pause', req.user)
+    );
+    res.json({ data: updated });
+  })
+);
+
+/**
+ * POST /api/subscriptions/:id/resume
+ * Resumes a paused ACTIVE subscription
+ */
+router.post(
+  '/:id/resume',
+  asyncHandler(async (req, res) => {
+    const updated = await withTransaction((client) =>
+      transition(client, req.params.id, 'resume', req.user)
+    );
+    res.json({ data: updated });
+  })
+);
+
+/**
+ * POST /api/subscriptions/:id/renew
+ * Renews subscription, extending expiry date (requires plan.renewable)
+ */
+router.post(
+  '/:id/renew',
+  asyncHandler(async (req, res) => {
+    const updated = await withTransaction((client) =>
+      transition(client, req.params.id, 'renew', req.user)
+    );
     res.json({ data: updated });
   })
 );
