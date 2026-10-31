@@ -1,43 +1,54 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { Check, Circle } from 'lucide-react';
+import { Spinner } from '../../components/Spinner';
+import { PasswordChecklist, isPasswordValid } from '../../components/PasswordChecklist';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 
 export const SignupPage = () => {
-  const { login } = useAuth();
+  const { login, session, user, loading, role, roleHome } = useAuth();
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
-  // 4 live password validation rules
-  const rules = [
-    { label: 'Minimum 9 characters', valid: password.length >= 9 },
-    { label: 'At least one uppercase letter (A-Z)', valid: /[A-Z]/.test(password) },
-    { label: 'At least one lowercase letter (a-z)', valid: /[a-z]/.test(password) },
-    { label: 'At least one special character (!@#$%^&*...)', valid: /[^A-Za-z0-9]/.test(password) },
-  ];
+  // While auth session is loading, show Spinner
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
-  const allRulesPassed = rules.every((r) => r.valid);
+  // If already signed in, redirect to role home
+  if (session && user) {
+    const home = roleHome || (role === 'CUSTOMER' ? '/portal/profile' : '/customers');
+    return <Navigate to={home} replace />;
+  }
+
+  const allRulesPassed = isPasswordValid(password);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
     if (!allRulesPassed) {
       setError('Please fulfill all password requirements before signing up.');
+      setFieldErrors({ password: 'Password does not meet all security requirements.' });
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       // Call backend signup API which enforces password rules and creates profile/customer
       await api.post('/auth/signup', {
@@ -49,14 +60,21 @@ export const SignupPage = () => {
 
       toast.success('Account created successfully!');
 
-      // Automatically sign in
+      // Automatically sign in and go to customer role home
       await login({ email, password });
-      navigate('/portal/subscriptions', { replace: true });
+      navigate('/portal/profile', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Signup failed';
       setError(msg);
+
+      const details = err.response?.data?.error?.details || [];
+      const map = {};
+      details.forEach((d) => {
+        if (d.field) map[d.field] = d.message;
+      });
+      setFieldErrors(map);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -87,7 +105,11 @@ export const SignupPage = () => {
             name="fullName"
             placeholder="Jane Doe"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            error={fieldErrors.fullName}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              if (fieldErrors.fullName) setFieldErrors((p) => ({ ...p, fullName: '' }));
+            }}
             required
             autoFocus
           />
@@ -98,7 +120,11 @@ export const SignupPage = () => {
             name="email"
             placeholder="name@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            error={fieldErrors.email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: '' }));
+            }}
             required
             autoComplete="email"
           />
@@ -109,7 +135,11 @@ export const SignupPage = () => {
             name="phone"
             placeholder="+91 9876543210"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            error={fieldErrors.phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              if (fieldErrors.phone) setFieldErrors((p) => ({ ...p, phone: '' }));
+            }}
           />
 
           <div>
@@ -121,40 +151,27 @@ export const SignupPage = () => {
               name="password"
               placeholder="••••••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: '' }));
+              }}
               required
               autoComplete="new-password"
-              className="w-full px-3 py-2 text-[14px] bg-white border border-surface-border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
+              className={`w-full px-3 py-2 text-[14px] bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors ${
+                fieldErrors.password ? 'border-status-danger' : 'border-surface-border'
+              }`}
             />
+            {fieldErrors.password && (
+              <p className="mt-1 text-[12px] text-status-danger">{fieldErrors.password}</p>
+            )}
 
             {/* Live Password Checklist */}
-            <div className="mt-3 p-3 bg-surface-canvas/60 rounded-[8px] border border-surface-border/80">
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-surface-muted mb-2">
-                Password Requirements:
-              </span>
-              <ul className="space-y-1.5 text-[12px]">
-                {rules.map((rule, idx) => (
-                  <li
-                    key={idx}
-                    className={`flex items-center gap-2 transition-colors ${
-                      rule.valid ? 'text-status-success font-medium' : 'text-surface-muted'
-                    }`}
-                  >
-                    {rule.valid ? (
-                      <Check className="w-3.5 h-3.5 text-status-success shrink-0" />
-                    ) : (
-                      <Circle className="w-3.5 h-3.5 text-surface-muted/50 shrink-0" />
-                    )}
-                    <span>{rule.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <PasswordChecklist password={password} title="Password Requirements:" />
           </div>
 
           <Button
             type="submit"
-            loading={loading}
+            loading={submitting}
             disabled={!allRulesPassed}
             className="w-full mt-3"
           >

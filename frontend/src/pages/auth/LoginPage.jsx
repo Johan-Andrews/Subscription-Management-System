@@ -1,20 +1,43 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Spinner } from '../../components/Spinner';
 import toast from 'react-hot-toast';
 
 export const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, logout, session, user, loading, role, roleHome } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get('next');
 
+  const TABS = [
+    { id: 'CUSTOMER', label: 'Customer' },
+    { id: 'STAFF', label: 'Staff' },
+    { id: 'ADMIN', label: 'Admin' },
+  ];
+
+  const [selectedRole, setSelectedRole] = useState('CUSTOMER');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // While auth session is loading, show Spinner
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  // If already signed in, redirect to role home
+  if (session && user) {
+    const home = roleHome || (role === 'CUSTOMER' ? '/portal/profile' : '/customers');
+    return <Navigate to={home} replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,24 +48,41 @@ export const LoginPage = () => {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
-      const data = await login({ email, password });
-      toast.success('Signed in successfully');
+      const res = await login({ email, password });
+      const userRole = res?.profile?.role || res?.user?.role || role;
 
-      if (next) {
-        navigate(decodeURIComponent(next), { replace: true });
+      // Check the real role from /auth/me against the selected tab
+      if (userRole !== selectedRole) {
+        await logout();
+        const activeTab = TABS.find((t) => t.id === selectedRole);
+        const tabLabel = activeTab ? activeTab.label : selectedRole;
+        const mismatchMsg = `This account is not a ${tabLabel} account`;
+        setError(mismatchMsg);
+        toast.error(mismatchMsg);
         return;
       }
 
-      // Redirect to root, where RootRedirect sends user to their role-based active home
-      navigate('/', { replace: true });
+      toast.success('Signed in successfully');
+
+      const defaultHome = userRole === 'CUSTOMER' ? '/portal/profile' : '/customers';
+
+      if (next) {
+        const decoded = decodeURIComponent(next);
+        if (decoded && !decoded.startsWith('/login')) {
+          navigate(decoded, { replace: true });
+          return;
+        }
+      }
+
+      navigate(defaultHome, { replace: true });
     } catch (err) {
       const msg = err.message || 'Invalid email or password';
       setError(msg);
       toast.error(msg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -60,6 +100,30 @@ export const LoginPage = () => {
           <p className="text-[13px] text-surface-muted mt-1">
             Subscription & Revenue Management Platform
           </p>
+        </div>
+
+        {/* Role tabs / segmented control */}
+        <div className="flex bg-surface-canvas p-1 rounded-full border border-surface-border mb-6">
+          {TABS.map((tab) => {
+            const isSelected = selectedRole === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setSelectedRole(tab.id);
+                  setError('');
+                }}
+                className={`flex-1 py-1.5 px-3 rounded-full text-[13px] font-medium transition-all ${
+                  isSelected
+                    ? 'bg-white text-brand shadow-sm font-semibold'
+                    : 'text-surface-muted hover:text-surface-text'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {error && (
@@ -107,7 +171,7 @@ export const LoginPage = () => {
 
           <Button
             type="submit"
-            loading={loading}
+            loading={submitting}
             className="w-full mt-2"
           >
             Sign in
@@ -115,10 +179,20 @@ export const LoginPage = () => {
         </form>
 
         <div className="mt-6 pt-6 border-t border-surface-border text-center text-[13px] text-surface-muted">
-          Don't have an account?{' '}
-          <Link to="/signup" className="font-semibold text-brand hover:underline">
-            Create an account
-          </Link>
+          {selectedRole === 'CUSTOMER' && (
+            <>
+              Don't have an account?{' '}
+              <Link to="/signup" className="font-semibold text-brand hover:underline">
+                Create an account
+              </Link>
+            </>
+          )}
+          {selectedRole === 'STAFF' && (
+            <span>Staff accounts are created by an administrator.</span>
+          )}
+          {selectedRole === 'ADMIN' && (
+            <span>Administrator accounts are provisioned by the system owner.</span>
+          )}
         </div>
       </div>
     </div>
