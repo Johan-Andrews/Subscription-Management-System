@@ -378,3 +378,4 @@ export const SubscriptionDetailPage = () => {
 };
 
 export default SubscriptionDetailPage;
+
