@@ -9,17 +9,20 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = useCallback(async (token) => {
+  const fetchUserProfile = useCallback(async (token, rethrow = false) => {
     try {
       if (!token) {
         setUser(null);
-        return;
+        return null;
       }
       const profile = await api.get('/auth/me');
       setUser(profile);
+      return profile;
     } catch (err) {
       console.error('Failed to load user profile:', err);
       setUser(null);
+      if (rethrow) throw err;
+      return null;
     }
   }, []);
 
@@ -75,25 +78,42 @@ export const AuthProvider = ({ children }) => {
       password,
     });
     if (error) throw error;
-    if (data.session?.access_token) {
-      await fetchUserProfile(data.session.access_token);
+    try {
+      let profile = null;
+      if (data.session?.access_token) {
+        profile = await fetchUserProfile(data.session.access_token, true);
+      }
+      return { ...data, profile };
+    } catch (err) {
+      await supabase.auth.signOut().catch(() => {});
+      setSession(null);
+      setUser(null);
+      const msg = err.response?.data?.error?.message || err.message || 'Authentication failed';
+      const customErr = new Error(msg);
+      customErr.status = err.response?.status || 403;
+      throw customErr;
     }
-    return data;
   };
 
   const logout = async () => {
     try {
       await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
     } finally {
       setSession(null);
       setUser(null);
     }
   };
 
+  const role = user?.role || null;
+  const roleHome = role === 'CUSTOMER' ? '/portal/profile' : '/customers';
+
   const value = {
     session,
     user,
-    role: user?.role || null,
+    role,
+    roleHome,
     customerId: user?.customerId || null,
     loading,
     login,
