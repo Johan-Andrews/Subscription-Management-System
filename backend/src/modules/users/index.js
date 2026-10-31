@@ -178,21 +178,34 @@ router.get(
 
     if (search) {
       params.push(`%${search}%`);
-      whereClause = `WHERE (name ILIKE $1 OR email ILIKE $1 OR phone ILIKE $1 OR company ILIKE $1)`;
+      whereClause = `WHERE (c.name ILIKE $1 OR c.email ILIKE $1 OR c.phone ILIKE $1 OR c.company ILIKE $1 OR p.full_name ILIKE $1 OR p.email ILIKE $1)`;
     }
 
     const countRes = await query(
-      `SELECT count(*) FROM customers ${whereClause}`,
+      `SELECT count(*) 
+       FROM customers c
+       LEFT JOIN profiles p ON c.user_id = p.id
+       ${whereClause}`,
       params
     );
     const total = parseInt(countRes.rows[0].count, 10);
 
     const dataParams = [...params, limit, offset];
     const dataRes = await query(
-      `SELECT id, user_id AS "userId", name, email, phone, company, address, created_at AS "createdAt", updated_at AS "updatedAt"
-       FROM customers
+      `SELECT 
+         c.id, 
+         c.user_id AS "userId", 
+         COALESCE(c.name, p.full_name) AS name, 
+         COALESCE(c.email, p.email) AS email, 
+         COALESCE(c.phone, p.phone) AS phone, 
+         c.company, 
+         c.address, 
+         c.created_at AS "createdAt", 
+         c.updated_at AS "updatedAt"
+       FROM customers c
+       LEFT JOIN profiles p ON c.user_id = p.id
        ${whereClause}
-       ORDER BY created_at DESC
+       ORDER BY c.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       dataParams
     );

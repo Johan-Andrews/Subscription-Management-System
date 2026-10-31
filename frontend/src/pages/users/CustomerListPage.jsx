@@ -40,8 +40,13 @@ export const CustomerListPage = () => {
           search: search || undefined,
         },
       });
-      setCustomers(res?.data || []);
-      setTotal(res?.total || 0);
+
+      // Handle both wrapped { data, total, page, pageSize } and direct array formats
+      const items = Array.isArray(res) ? res : (res?.data || []);
+      const totalCount = res?.total !== undefined ? res.total : items.length;
+
+      setCustomers(items);
+      setTotal(totalCount);
     } catch (err) {
       console.error('Failed to load customers:', err);
     } finally {
