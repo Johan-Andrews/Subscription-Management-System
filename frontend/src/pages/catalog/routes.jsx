@@ -15,6 +15,7 @@ import api from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 import { ProductFormPage, ProductsPage } from './products';
 import { PlanFormPage, PlansPage } from './plans';
+import { DiscountPage } from './discounts';
 
 const PAGE_SIZE = 20;
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api')
@@ -329,11 +330,13 @@ export const routes = [
   { path: '/plans', element: <PlansPage />, area: 'admin' },
   { path: '/plans/new', element: <PlanFormPage />, area: 'admin', roles: ['ADMIN'] },
   { path: '/plans/:id/edit', element: <PlanFormPage />, area: 'admin', roles: ['ADMIN'] },
+  { path: '/discounts', element: <DiscountPage />, area: 'admin' },
   { path: '/taxes', element: <TaxPage />, area: 'admin' },
 ];
 
 export const navItems = [
   { label: 'Products', path: '/products', roles: ['ADMIN', 'STAFF'] },
   { label: 'Plans', path: '/plans', roles: ['ADMIN', 'STAFF'] },
+  { label: 'Discounts', path: '/discounts', roles: ['ADMIN', 'STAFF'] },
   { label: 'Taxes', path: '/taxes', roles: ['ADMIN', 'STAFF'] },
 ];
