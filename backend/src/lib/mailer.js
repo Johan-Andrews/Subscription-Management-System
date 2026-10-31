@@ -45,3 +45,4 @@ const sendMail = async ({ to, subject, html, attachments = [] }) => {
 module.exports = {
   sendMail,
 };
+

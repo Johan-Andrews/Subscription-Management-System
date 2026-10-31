@@ -195,3 +195,4 @@ export const AdminLayout = ({ navItems = [] }) => {
 };
 
 export default AdminLayout;
+

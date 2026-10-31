@@ -75,3 +75,4 @@ alter table invoices enable row level security;
 alter table invoice_lines enable row level security;
 alter table invoice_discounts enable row level security;
 alter table payments enable row level security;
+

@@ -16,3 +16,4 @@ for f in $(git diff --name-only origin/main...HEAD); do
   if [ "$o" != "$me" ]; then echo "NOT YOURS ($o owns): $f"; bad=1; fi
 done
 [ $bad -eq 0 ] && echo "OK: all changed files are owned by $me" || { echo "Fix before pushing."; exit 1; }
+

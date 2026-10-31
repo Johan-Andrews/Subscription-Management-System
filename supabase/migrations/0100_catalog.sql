@@ -83,3 +83,4 @@ alter table product_variants enable row level security;
 alter table plans enable row level security;
 alter table discounts enable row level security;
 alter table discount_products enable row level security;
+

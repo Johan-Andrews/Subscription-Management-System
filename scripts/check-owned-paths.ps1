@@ -28,3 +28,4 @@ if ($bad -eq 0) {
     Write-Host "Fix before pushing."
     exit 1
 }
+

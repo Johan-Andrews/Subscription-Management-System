@@ -37,3 +37,4 @@ create sequence invoice_number_seq start 1000;
 -- Frontend uses the anon key only for auth. No table is readable through it.
 alter table profiles enable row level security;
 alter table customers enable row level security;
+

@@ -34,3 +34,4 @@ export const Spinner = ({ size = 'md', className = '' }) => {
 };
 
 export default Spinner;
+

@@ -10,3 +10,4 @@ const runDaily = async () => {
 module.exports = {
   runDaily,
 };
+

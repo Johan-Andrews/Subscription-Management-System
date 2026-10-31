@@ -91,3 +91,4 @@ alter table subscriptions enable row level security;
 alter table subscription_lines enable row level security;
 alter table subscription_status_history enable row level security;
 alter table billing_runs enable row level security;
+

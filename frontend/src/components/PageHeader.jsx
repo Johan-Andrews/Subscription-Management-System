@@ -50,3 +50,4 @@ export const RecordHeader = ({
 };
 
 export default PageHeader;
+

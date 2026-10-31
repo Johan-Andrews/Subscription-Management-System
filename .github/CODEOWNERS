@@ -44,3 +44,4 @@ frontend/src/pages/payments/ @member-d
 frontend/src/pages/reports/ @member-d
 supabase/migrations/03* @member-d
 docs/member-d/ @member-d
+

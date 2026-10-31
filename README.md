@@ -29,3 +29,4 @@ Enterprise subscription management platform covering catalog, quotations, subscr
 - **Frontend:** React 18, Vite, Tailwind CSS, Lucide React, Axios, React Router, Supabase Auth.
 - **Backend:** Node.js, Express, Postgres (`pg`), Zod, Supabase Admin SDK, Node-cron, Nodemailer, PDFKit.
 - **Database:** Supabase PostgreSQL with Row Level Security (RLS) enabled.
+
