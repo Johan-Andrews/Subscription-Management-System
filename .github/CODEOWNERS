@@ -1,0 +1,46 @@
+# CODEOWNERS for Brightloop Subscription Management System
+
+# Member A (Foundation, Auth, Users, Shell, Core)
+* @member-a
+backend/src/config/ @member-a
+backend/src/db/ @member-a
+backend/src/lib/ @member-a
+backend/src/middleware/ @member-a
+backend/src/modules/auth/ @member-a
+backend/src/modules/users/ @member-a
+backend/src/server.js @member-a
+backend/src/app.js @member-a
+frontend/src/lib/ @member-a
+frontend/src/components/ @member-a
+frontend/src/layouts/ @member-a
+frontend/src/pages/auth/ @member-a
+frontend/src/pages/users/ @member-a
+supabase/migrations/00* @member-a
+docs/member-a/ @member-a
+
+# Member B (Catalog: Products, Variants, Taxes, Plans, Discounts)
+backend/src/modules/catalog/ @member-b
+backend/scripts/seed-catalog.js @member-b
+frontend/src/pages/catalog/ @member-b
+supabase/migrations/01* @member-b
+docs/member-b/ @member-b
+
+# Member C (Quotations, Subscriptions, Billing Engine, Autoclose)
+backend/src/modules/subscriptions/ @member-c
+backend/src/modules/billing/ @member-c
+backend/src/jobs/billing.job.js @member-c
+backend/src/jobs/autoclose.job.js @member-c
+frontend/src/pages/subscriptions/ @member-c
+supabase/migrations/02* @member-c
+docs/member-c/ @member-c
+
+# Member D (Invoices, Payments, Reports, Bulk Seed)
+backend/src/modules/invoices/ @member-d
+backend/src/modules/payments/ @member-d
+backend/src/modules/reports/ @member-d
+backend/scripts/seed-bulk.js @member-d
+frontend/src/pages/invoices/ @member-d
+frontend/src/pages/payments/ @member-d
+frontend/src/pages/reports/ @member-d
+supabase/migrations/03* @member-d
+docs/member-d/ @member-d

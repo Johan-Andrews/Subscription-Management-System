@@ -1,0 +1,99 @@
+import React, { useState } from 'react';
+import { NavLink, useNavigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../lib/AuthContext';
+import { LogOut, ChevronDown, Repeat, FileText, CreditCard, User } from 'lucide-react';
+
+export const PortalLayout = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const portalNav = [
+    { label: 'My Subscriptions', path: '/portal/subscriptions', icon: Repeat },
+    { label: 'My Invoices', path: '/portal/invoices', icon: FileText },
+    { label: 'Payments', path: '/portal/payments', icon: CreditCard },
+    { label: 'Profile', path: '/portal/profile', icon: User },
+  ];
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-surface-canvas text-surface-text">
+      {/* Top Navigation Bar */}
+      <header className="h-[64px] bg-white border-b border-surface-border px-8 flex items-center justify-between shrink-0 shadow-sm sticky top-0 z-30">
+        <div className="flex items-center gap-8">
+          {/* Brand */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-brand flex items-center justify-center text-white font-bold text-[16px]">
+              BL
+            </div>
+            <span className="font-semibold text-[16px] text-surface-text tracking-tight">
+              Brightloop Customer Portal
+            </span>
+          </div>
+
+          {/* Nav links */}
+          <nav className="hidden md:flex items-center gap-1">
+            {portalNav.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `px-3.5 py-2 rounded-full text-[14px] font-medium transition-colors ${
+                    isActive
+                      ? 'bg-brand-soft text-brand font-semibold'
+                      : 'text-surface-muted hover:text-surface-text hover:bg-surface-canvas'
+                  }`
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
+
+        {/* User Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="flex items-center gap-2 p-1.5 rounded-full hover:bg-surface-canvas transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-brand-soft text-brand font-bold text-[13px] flex items-center justify-center">
+              {user?.fullName ? user.fullName[0].toUpperCase() : 'C'}
+            </div>
+            <span className="text-[14px] font-medium text-surface-text hidden sm:inline">
+              {user?.fullName || 'Customer'}
+            </span>
+            <ChevronDown className="w-4 h-4 text-surface-muted" />
+          </button>
+
+          {userMenuOpen && (
+            <div className="absolute right-0 mt-2 w-52 bg-white rounded-[12px] border border-surface-border shadow-popover py-1.5 z-50">
+              <div className="px-4 py-2 border-b border-surface-border text-[12px] text-surface-muted">
+                Logged in as <br />
+                <span className="font-semibold text-surface-text">{user?.email}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full px-4 py-2 text-left text-[13px] text-status-danger hover:bg-status-danger-soft flex items-center gap-2 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main Canvas */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
+export default PortalLayout;

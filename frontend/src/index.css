@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand */
+  --primary: #0B5CFF;          /* primary buttons, active tab, links */
+  --primary-hover: #0848C7;
+  --primary-soft: #E5EFFF;     /* selected row, hover tint */
+  --link: #0A5BC4;
+
+  /* Shell */
+  --rail-bg: #0A2A66;          /* left icon rail */
+  --rail-icon: #FFFFFF;
+  --rail-active-outline: #FFFFFF;
+
+  /* Surfaces */
+  --canvas: #F3F4F6;           /* page background */
+  --card: #FFFFFF;
+  --border: #E1E5EB;
+  --muted-text: #5C667A;
+  --text: #181B25;
+
+  /* Status */
+  --success: #0F9D58;  --success-soft: #DDF5E7;
+  --warning: #F5A524;  --warning-soft: #FFF1D6;
+  --danger:  #D92D20;  --danger-soft:  #FDEBEA;
+  --info:    #0B5CFF;  --info-soft:    #E5EFFF;
+  --neutral: #5C667A;  --neutral-soft: #EDEFF3;
+
+  /* Progress path */
+  --path-done: #A8F0E0;        /* completed step (mint) with check icon */
+  --path-current: #0A2A66;     /* current step (navy), white text */
+  --path-todo: #E5E7EB;        /* future step (grey) */
+
+  /* AI / highlight glow */
+  --glow: linear-gradient(135deg, #E9E3FF 0%, #FBE4F3 100%);
+
+  --radius-card: 16px;
+  --radius-input: 8px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgba(16,24,40,.06);
+  --shadow-popover: 0 8px 24px rgba(16,24,40,.12);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--canvas);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-text);
+}

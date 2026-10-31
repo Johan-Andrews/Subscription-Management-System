@@ -781,7 +781,9 @@ Push directly to `main`. Then turn on branch protection.
    - `src/jobs/scheduler.js`: if `CRON_ENABLED=true`, schedule `BILLING_CRON` calling `require('./billing.job').runDaily()` and `require('./autoclose.job')` is called from inside the billing job. Create stubs `billing.job.js` (exports `runDaily = async () => {}`) and `autoclose.job.js` (exports `run = async () => {}`) so C only fills them in.
    - `src/server.js`: start server and the scheduler.
    - `.env.example` from section 7.2.
-4. **Frontend scaffold** (`npm create vite@latest frontend -- --template react`). Install **all** dependencies now:
+4. **Frontend scaffold**
+Read design.md and translate its colors, typography, spacing, and component styles into tailwind.config.js, index.css, and the shared components and layouts
+ (`npm create vite@latest frontend -- --template react`). Install **all** dependencies now:
    `react-router-dom axios @supabase/supabase-js qrcode.react recharts react-hot-toast` and dev `tailwindcss postcss autoprefixer` (configure Tailwind).
    - `src/lib/api.js`: Axios instance, base `VITE_API_URL`, adds the Supabase access token to every request, unwraps `{data}`, shows toast on `error.message`.
    - `src/lib/supabase.js`, `src/lib/AuthContext.jsx` (session, `user` from `/auth/me`, `login`, `logout`, `role`).
