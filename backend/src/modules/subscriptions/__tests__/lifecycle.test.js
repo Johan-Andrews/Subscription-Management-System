@@ -161,3 +161,4 @@ runTests().catch((err) => {
   console.error('Lifecycle tests failed:', err);
   process.exit(1);
 });
+
