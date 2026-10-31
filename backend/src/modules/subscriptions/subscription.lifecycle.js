@@ -290,3 +290,4 @@ module.exports = {
   ALLOWED_TRANSITIONS,
   transition,
 };
+

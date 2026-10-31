@@ -3,6 +3,7 @@ import QuotationTemplatesListPage from './QuotationTemplatesListPage';
 import SubscriptionsListPage from './SubscriptionsListPage';
 import SubscriptionCreatePage from './SubscriptionCreatePage';
 import SubscriptionDetailPage from './SubscriptionDetailPage';
+import BillingPage from './BillingPage';
 
 export const routes = [
   {
@@ -29,6 +30,12 @@ export const routes = [
     area: 'admin',
     roles: ['ADMIN', 'STAFF'],
   },
+  {
+    path: '/billing',
+    element: <BillingPage />,
+    area: 'admin',
+    roles: ['ADMIN', 'STAFF'],
+  },
 ];
 
 export const navItems = [
@@ -40,6 +47,11 @@ export const navItems = [
   {
     label: 'Quotation Templates',
     path: '/quotation-templates',
+    roles: ['ADMIN', 'STAFF'],
+  },
+  {
+    label: 'Billing',
+    path: '/billing',
     roles: ['ADMIN', 'STAFF'],
   },
 ];
