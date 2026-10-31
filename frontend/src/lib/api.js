@@ -9,19 +9,24 @@ const api = axios.create({
   },
 });
 
-api.interceptors.request.use(async (config) => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+      }
+    } catch (err) {
+      console.error('Error attaching auth token to request:', err);
     }
-  } catch (err) {
-    console.error('Error attaching auth token to request:', err);
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+);
 
 api.interceptors.response.use(
   (response) => {
@@ -29,7 +34,17 @@ api.interceptors.response.use(
     if (response.config?.responseType === 'blob') {
       return response.data;
     }
-    // Unwrap { data: ... }
+
+    // If it is a paginated list response ({ data: [...], page, pageSize, total }), preserve the full pagination object
+    if (
+      response.data &&
+      response.data.data !== undefined &&
+      (response.data.total !== undefined || response.data.page !== undefined)
+    ) {
+      return response.data;
+    }
+
+    // Unwrap standard { data: ... } responses
     return response.data?.data !== undefined ? response.data.data : response.data;
   },
   (error) => {
@@ -41,4 +56,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
