@@ -394,3 +394,4 @@ export const PortalSubscriptionDetailPage = () => {
 };
 
 export default PortalSubscriptionDetailPage;
+
