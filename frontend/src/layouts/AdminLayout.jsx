@@ -11,7 +11,6 @@ import {
   BarChart3,
   ShieldAlert,
   Search,
-  Plus,
   Bell,
   HelpCircle,
   LogOut,
@@ -24,25 +23,24 @@ export const AdminLayout = ({ navItems = [] }) => {
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const defaultRailItems = [
-    { label: 'Home', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'STAFF'] },
-    { label: 'Subscriptions', path: '/subscriptions', icon: Repeat, roles: ['ADMIN', 'STAFF'] },
-    { label: 'Invoices', path: '/invoices', icon: FileText, roles: ['ADMIN', 'STAFF'] },
-    { label: 'Payments', path: '/payments', icon: CreditCard, roles: ['ADMIN', 'STAFF'] },
-    { label: 'Products & Plans', path: '/products', icon: Package, roles: ['ADMIN', 'STAFF'] },
-    { label: 'Customers', path: '/customers', icon: Users, roles: ['ADMIN', 'STAFF'] },
-    { label: 'Reports', path: '/reports', icon: BarChart3, roles: ['ADMIN', 'STAFF'] },
-    { label: 'Admin', path: '/users/staff', icon: ShieldAlert, roles: ['ADMIN'] },
-  ];
+  // Icon mapping for navigation items
+  const getIconForPath = (path = '', label = '') => {
+    const l = label.toLowerCase();
+    const p = path.toLowerCase();
+    if (p.includes('dash') || l.includes('home') || l.includes('dashboard')) return LayoutDashboard;
+    if (p.includes('subscrip') || l.includes('subscrip')) return Repeat;
+    if (p.includes('invoice') || l.includes('invoice')) return FileText;
+    if (p.includes('pay') || l.includes('pay')) return CreditCard;
+    if (p.includes('product') || p.includes('plan') || l.includes('product') || l.includes('plan') || l.includes('catalog')) return Package;
+    if (p.includes('customer') || l.includes('customer')) return Users;
+    if (p.includes('report') || l.includes('report')) return BarChart3;
+    if (p.includes('staff') || p.includes('admin') || l.includes('staff') || l.includes('admin')) return ShieldAlert;
+    return Users;
+  };
 
-  // Filter rail items based on current role
-  const visibleRailItems = defaultRailItems.filter(
-    (item) => !item.roles || item.roles.includes(role)
-  );
-
-  // Grouped navItems from modules
-  const currentModuleItems = navItems.filter(
-    (item) => (!item.roles || item.roles.includes(role)) && location.pathname.startsWith(item.path)
+  // Only show navItems that actually registered and match the user's role
+  const visibleRailItems = navItems.filter(
+    (item) => (!item.roles || item.roles.includes(role)) && !item.path?.startsWith('/portal')
   );
 
   const handleLogout = async () => {
@@ -59,11 +57,13 @@ export const AdminLayout = ({ navItems = [] }) => {
           BL
         </div>
 
-        {/* Rail nav items */}
+        {/* Dynamic rail items from registered modules only */}
         <nav className="flex flex-col gap-3 w-full px-2 flex-1">
           {visibleRailItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+            const Icon = item.icon || getIconForPath(item.path, item.label);
+            const isActive =
+              location.pathname === item.path ||
+              (item.path !== '/' && location.pathname.startsWith(item.path));
 
             return (
               <NavLink
@@ -101,7 +101,7 @@ export const AdminLayout = ({ navItems = [] }) => {
               <Search className="w-4 h-4 text-surface-muted absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search subscriptions, customers, invoices..."
+                placeholder="Search..."
                 className="w-full pl-9 pr-4 py-1.5 text-[13px] bg-surface-canvas/60 border border-surface-border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all"
               />
             </div>
@@ -163,29 +163,7 @@ export const AdminLayout = ({ navItems = [] }) => {
           </div>
         </header>
 
-        {/* 3. Module Tab Bar (optional sub-tabs) */}
-        {currentModuleItems.length > 1 && (
-          <div className="bg-white border-b border-surface-border px-8 pt-3 flex items-center gap-6">
-            {currentModuleItems.map((tab) => {
-              const isTabActive = location.pathname === tab.path;
-              return (
-                <NavLink
-                  key={tab.path}
-                  to={tab.path}
-                  className={`pb-3 text-[14px] font-medium transition-colors border-b-[3px] -mb-[1px] ${
-                    isTabActive
-                      ? 'text-brand border-brand font-semibold'
-                      : 'text-surface-muted border-transparent hover:text-surface-text'
-                  }`}
-                >
-                  {tab.label}
-                </NavLink>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 4. Canvas Body */}
+        {/* 3. Canvas Body */}
         <main className="flex-1 p-8 overflow-y-auto">
           <Outlet />
         </main>
@@ -195,4 +173,3 @@ export const AdminLayout = ({ navItems = [] }) => {
 };
 
 export default AdminLayout;
-
