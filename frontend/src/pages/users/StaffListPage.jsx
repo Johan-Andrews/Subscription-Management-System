@@ -7,7 +7,8 @@ import { Table } from '../../components/Table';
 import { Modal } from '../../components/Modal';
 import { Input } from '../../components/Input';
 import { Badge } from '../../components/Badge';
-import { UserPlus, Shield, Check, Circle, Power, Edit2 } from 'lucide-react';
+import { UserPlus, Shield, Power, Edit2 } from 'lucide-react';
+import { PasswordChecklist, isPasswordValid } from '../../components/PasswordChecklist';
 import toast from 'react-hot-toast';
 
 export const StaffListPage = () => {
@@ -21,6 +22,7 @@ export const StaffListPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Form states (Edit)
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -29,14 +31,7 @@ export const StaffListPage = () => {
   const [updating, setUpdating] = useState(false);
   const [editError, setEditError] = useState('');
 
-  // Password rules
-  const rules = [
-    { label: 'Minimum 9 characters', valid: password.length >= 9 },
-    { label: 'Uppercase letter (A-Z)', valid: /[A-Z]/.test(password) },
-    { label: 'Lowercase letter (a-z)', valid: /[a-z]/.test(password) },
-    { label: 'Special character (!@#$%^&*...)', valid: /[^A-Za-z0-9]/.test(password) },
-  ];
-  const allRulesPassed = rules.every((r) => r.valid);
+  const allRulesPassed = isPasswordValid(password);
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);
@@ -57,9 +52,11 @@ export const StaffListPage = () => {
   const handleCreateStaff = async (e) => {
     e.preventDefault();
     setFormError('');
+    setFieldErrors({});
 
     if (!allRulesPassed) {
       setFormError('Please fulfill all password requirements.');
+      setFieldErrors({ password: 'Password does not meet all security requirements.' });
       return;
     }
 
@@ -76,10 +73,18 @@ export const StaffListPage = () => {
       setFullName('');
       setEmail('');
       setPassword('');
+      setFieldErrors({});
       fetchStaff();
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Failed to create staff account';
       setFormError(msg);
+
+      const details = err.response?.data?.error?.details || [];
+      const map = {};
+      details.forEach((d) => {
+        if (d.field) map[d.field] = d.message;
+      });
+      setFieldErrors(map);
     } finally {
       setCreating(false);
     }
@@ -105,6 +110,15 @@ export const StaffListPage = () => {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleOpenCreate = () => {
+    setFullName('');
+    setEmail('');
+    setPassword('');
+    setFormError('');
+    setFieldErrors({});
+    setModalOpen(true);
   };
 
   const handleOpenEdit = (member) => {
@@ -215,7 +229,7 @@ export const StaffListPage = () => {
         title="Staff Management"
         subtitle="Only Administrators can create and manage staff accounts."
         actions={
-          <Button icon={UserPlus} onClick={() => setModalOpen(true)}>
+          <Button icon={UserPlus} onClick={handleOpenCreate}>
             Add Staff Member
           </Button>
         }
@@ -228,7 +242,7 @@ export const StaffListPage = () => {
           loading={loading}
           emptyMessage="No staff members found."
           emptyActionLabel="Add First Staff Member"
-          onEmptyAction={() => setModalOpen(true)}
+          onEmptyAction={handleOpenCreate}
         />
       </Card>
 
@@ -251,7 +265,11 @@ export const StaffListPage = () => {
             name="fullName"
             placeholder="John Smith"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            error={fieldErrors.fullName}
+            onChange={(e) => {
+              setFullName(e.target.value);
+              if (fieldErrors.fullName) setFieldErrors((p) => ({ ...p, fullName: '' }));
+            }}
             required
             autoFocus
           />
@@ -262,7 +280,11 @@ export const StaffListPage = () => {
             name="email"
             placeholder="staff@brightloop.test"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            error={fieldErrors.email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: '' }));
+            }}
             required
           />
 
@@ -274,34 +296,21 @@ export const StaffListPage = () => {
               type="password"
               placeholder="••••••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) setFieldErrors((p) => ({ ...p, password: '' }));
+              }}
               required
-              className="w-full px-3 py-2 text-[14px] bg-white border border-surface-border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
+              className={`w-full px-3 py-2 text-[14px] bg-white border rounded-[8px] focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors ${
+                fieldErrors.password ? 'border-status-danger' : 'border-surface-border'
+              }`}
             />
+            {fieldErrors.password && (
+              <p className="mt-1 text-[12px] text-status-danger">{fieldErrors.password}</p>
+            )}
 
-            {/* Password checklist */}
-            <div className="mt-3 p-3 bg-surface-canvas/60 rounded-[8px] border border-surface-border/80">
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-surface-muted mb-2">
-                Requirements:
-              </span>
-              <ul className="space-y-1.5 text-[12px]">
-                {rules.map((rule, idx) => (
-                  <li
-                    key={idx}
-                    className={`flex items-center gap-2 transition-colors ${
-                      rule.valid ? 'text-status-success font-medium' : 'text-surface-muted'
-                    }`}
-                  >
-                    {rule.valid ? (
-                      <Check className="w-3.5 h-3.5 text-status-success shrink-0" />
-                    ) : (
-                      <Circle className="w-3.5 h-3.5 text-surface-muted/50 shrink-0" />
-                    )}
-                    <span>{rule.label}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Live Password Checklist */}
+            <PasswordChecklist password={password} title="Password Requirements:" />
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-surface-border">

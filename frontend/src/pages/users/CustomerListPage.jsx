@@ -29,6 +29,7 @@ export const CustomerListPage = () => {
   const [company, setCompany] = useState('');
   const [address, setAddress] = useState('');
   const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -66,6 +67,7 @@ export const CustomerListPage = () => {
     setCompany('');
     setAddress('');
     setFormError('');
+    setFieldErrors({});
     setModalOpen(true);
   };
 
@@ -77,12 +79,14 @@ export const CustomerListPage = () => {
     setCompany(cust.company || '');
     setAddress(cust.address || '');
     setFormError('');
+    setFieldErrors({});
     setModalOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     setFormError('');
+    setFieldErrors({});
     setSaving(true);
 
     try {
@@ -97,16 +101,29 @@ export const CustomerListPage = () => {
       if (editingCustomer) {
         await api.patch(`/customers/${editingCustomer.id}`, payload);
         toast.success('Customer updated successfully');
+        fetchCustomers();
       } else {
         await api.post('/customers', payload);
         toast.success('Customer created successfully');
+        if (page !== 1 || search) {
+          setSearch('');
+          setPage(1);
+        } else {
+          fetchCustomers();
+        }
       }
 
       setModalOpen(false);
-      fetchCustomers();
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Failed to save customer';
       setFormError(msg);
+
+      const details = err.response?.data?.error?.details || [];
+      const map = {};
+      details.forEach((d) => {
+        if (d.field) map[d.field] = d.message;
+      });
+      setFieldErrors(map);
     } finally {
       setSaving(false);
     }
@@ -235,7 +252,11 @@ export const CustomerListPage = () => {
             name="name"
             placeholder="e.g. Acme Corp / John Doe"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            error={fieldErrors.name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (fieldErrors.name) setFieldErrors((p) => ({ ...p, name: '' }));
+            }}
             required
             autoFocus
           />
@@ -247,7 +268,11 @@ export const CustomerListPage = () => {
               name="email"
               placeholder="billing@acme.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              error={fieldErrors.email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email) setFieldErrors((p) => ({ ...p, email: '' }));
+              }}
             />
 
             <Input
@@ -256,7 +281,11 @@ export const CustomerListPage = () => {
               name="phone"
               placeholder="+91 9876543210"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              error={fieldErrors.phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (fieldErrors.phone) setFieldErrors((p) => ({ ...p, phone: '' }));
+              }}
             />
           </div>
 
@@ -265,7 +294,11 @@ export const CustomerListPage = () => {
             name="company"
             placeholder="Acme Technologies Ltd."
             value={company}
-            onChange={(e) => setCompany(e.target.value)}
+            error={fieldErrors.company}
+            onChange={(e) => {
+              setCompany(e.target.value);
+              if (fieldErrors.company) setFieldErrors((p) => ({ ...p, company: '' }));
+            }}
           />
 
           <Textarea
@@ -273,7 +306,11 @@ export const CustomerListPage = () => {
             name="address"
             placeholder="Floor 4, Tower B, Business Park..."
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            error={fieldErrors.address}
+            onChange={(e) => {
+              setAddress(e.target.value);
+              if (fieldErrors.address) setFieldErrors((p) => ({ ...p, address: '' }));
+            }}
             rows={3}
           />
 
