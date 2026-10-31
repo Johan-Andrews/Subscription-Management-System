@@ -16,16 +16,17 @@ export const ProtectedRoute = ({ children, roles = [] }) => {
   }
 
   if (!session || !user) {
-    const next = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?next=${next}`} replace />;
+    const path = location.pathname + location.search;
+    const next = path && path !== '/' && !path.startsWith('/login') ? `?next=${encodeURIComponent(path)}` : '';
+    return <Navigate to={`/login${next}`} replace />;
   }
 
   if (roles.length > 0 && !roles.includes(role)) {
     // If authenticated user does not have permission for this route
     if (role === 'CUSTOMER') {
-      return <Navigate to="/portal/subscriptions" replace />;
+      return <Navigate to="/portal/profile" replace />;
     }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/customers" replace />;
   }
 
   return children;

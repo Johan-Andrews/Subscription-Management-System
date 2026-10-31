@@ -1,22 +1,38 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Spinner } from '../../components/Spinner';
 import { Check, Circle } from 'lucide-react';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
 
 export const SignupPage = () => {
-  const { login } = useAuth();
+  const { login, session, user, loading, role, roleHome } = useAuth();
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // While auth session is loading, show Spinner
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  // If already signed in, redirect to role home
+  if (session && user) {
+    const home = roleHome || (role === 'CUSTOMER' ? '/portal/profile' : '/customers');
+    return <Navigate to={home} replace />;
+  }
 
   // 4 live password validation rules
   const rules = [
@@ -37,7 +53,7 @@ export const SignupPage = () => {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       // Call backend signup API which enforces password rules and creates profile/customer
       await api.post('/auth/signup', {
@@ -49,14 +65,14 @@ export const SignupPage = () => {
 
       toast.success('Account created successfully!');
 
-      // Automatically sign in
+      // Automatically sign in and go to customer role home
       await login({ email, password });
-      navigate('/portal/subscriptions', { replace: true });
+      navigate('/portal/profile', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.error?.message || err.message || 'Signup failed';
       setError(msg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -154,7 +170,7 @@ export const SignupPage = () => {
 
           <Button
             type="submit"
-            loading={loading}
+            loading={submitting}
             disabled={!allRulesPassed}
             className="w-full mt-3"
           >

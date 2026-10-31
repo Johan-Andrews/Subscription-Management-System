@@ -13,13 +13,15 @@ export const AuthProvider = ({ children }) => {
     try {
       if (!token) {
         setUser(null);
-        return;
+        return null;
       }
       const profile = await api.get('/auth/me');
       setUser(profile);
+      return profile;
     } catch (err) {
       console.error('Failed to load user profile:', err);
       setUser(null);
+      return null;
     }
   }, []);
 
@@ -75,25 +77,32 @@ export const AuthProvider = ({ children }) => {
       password,
     });
     if (error) throw error;
+    let profile = null;
     if (data.session?.access_token) {
-      await fetchUserProfile(data.session.access_token);
+      profile = await fetchUserProfile(data.session.access_token);
     }
-    return data;
+    return { ...data, profile };
   };
 
   const logout = async () => {
     try {
       await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
     } finally {
       setSession(null);
       setUser(null);
     }
   };
 
+  const role = user?.role || null;
+  const roleHome = role === 'CUSTOMER' ? '/portal/profile' : '/customers';
+
   const value = {
     session,
     user,
-    role: user?.role || null,
+    role,
+    roleHome,
     customerId: user?.customerId || null,
     loading,
     login,

@@ -1,20 +1,36 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Spinner } from '../../components/Spinner';
 import toast from 'react-hot-toast';
 
 export const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, session, user, loading, role, roleHome } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const next = searchParams.get('next');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // While auth session is loading, show Spinner
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  // If already signed in, redirect to role home
+  if (session && user) {
+    const home = roleHome || (role === 'CUSTOMER' ? '/portal/profile' : '/customers');
+    return <Navigate to={home} replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,24 +41,29 @@ export const LoginPage = () => {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
-      const data = await login({ email, password });
+      const res = await login({ email, password });
       toast.success('Signed in successfully');
 
+      const userRole = res?.profile?.role || role;
+      const defaultHome = userRole === 'CUSTOMER' ? '/portal/profile' : '/customers';
+
       if (next) {
-        navigate(decodeURIComponent(next), { replace: true });
-        return;
+        const decoded = decodeURIComponent(next);
+        if (decoded && !decoded.startsWith('/login')) {
+          navigate(decoded, { replace: true });
+          return;
+        }
       }
 
-      // Redirect to root, where RootRedirect sends user to their role-based active home
-      navigate('/', { replace: true });
+      navigate(defaultHome, { replace: true });
     } catch (err) {
       const msg = err.message || 'Invalid email or password';
       setError(msg);
       toast.error(msg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -107,7 +128,7 @@ export const LoginPage = () => {
 
           <Button
             type="submit"
-            loading={loading}
+            loading={submitting}
             className="w-full mt-2"
           >
             Sign in

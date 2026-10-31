@@ -44,8 +44,8 @@ export const AdminLayout = ({ navItems = [] }) => {
   );
 
   const handleLogout = async () => {
+    navigate('/login', { replace: true });
     await logout();
-    navigate('/login');
   };
 
   return (

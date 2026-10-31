@@ -6,6 +6,7 @@ import { ProtectedRoute } from './layouts/ProtectedRoute';
 import { AdminLayout } from './layouts/AdminLayout';
 import { PortalLayout } from './layouts/PortalLayout';
 import { ComingSoon } from './components/ComingSoon';
+import { Spinner } from './components/Spinner';
 
 import * as auth from './pages/auth/routes';
 import * as users from './pages/users/routes';
@@ -67,38 +68,36 @@ const unbuiltPortalRoutes = knownPortalModules.filter(
   (m) => !portalRoutes.some((pr) => pr.path === m.path)
 );
 
+function getRoleHomePath(role) {
+  if (role === 'CUSTOMER') {
+    return '/portal/profile';
+  }
+  const hasDashboard = adminRoutes.some((r) => r.path === '/dashboard');
+  return hasDashboard ? '/dashboard' : '/customers';
+}
+
 function RootRedirect() {
   const { session, user, loading, role } = useAuth();
-  if (loading) return null;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   if (!session || !user) {
     return <Navigate to="/login" replace />;
   }
-  if (role === 'CUSTOMER') {
-    const hasPortalSubs = portalRoutes.some((r) => r.path === '/portal/subscriptions');
-    return <Navigate to={hasPortalSubs ? '/portal/subscriptions' : '/portal/profile'} replace />;
-  }
-  const hasDashboard = adminRoutes.some((r) => r.path === '/dashboard');
-  return <Navigate to={hasDashboard ? '/dashboard' : '/customers'} replace />;
+
+  return <Navigate to={getRoleHomePath(role)} replace />;
 }
 
 function NotFoundPage() {
-  const { user, role } = useAuth();
-  const hasDashboard = adminRoutes.some((r) => r.path === '/dashboard');
-  const homePath = !user
-    ? '/login'
-    : role === 'CUSTOMER'
-    ? '/portal/profile'
-    : hasDashboard
-    ? '/dashboard'
-    : '/customers';
-
-  const homeLabel = !user
-    ? 'Return to Login'
-    : role === 'CUSTOMER'
-    ? 'Return to Profile'
-    : hasDashboard
-    ? 'Return to Dashboard'
-    : 'Return to Customers';
+  const { session, user, role } = useAuth();
+  const isAuthenticated = !!session && !!user;
+  const homePath = !isAuthenticated ? '/login' : getRoleHomePath(role);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-surface-canvas text-center">
@@ -108,7 +107,7 @@ function NotFoundPage() {
         to={homePath}
         className="px-6 py-2 rounded-full bg-brand text-white text-[14px] font-medium hover:bg-brand-hover transition-colors shadow-sm"
       >
-        {homeLabel}
+        Return to home
       </Link>
     </div>
   );

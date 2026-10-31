@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/Button';
+import { Spinner } from '../../components/Spinner';
 import { Check, Circle } from 'lucide-react';
 import api from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -68,7 +69,7 @@ export const ResetPasswordPage = () => {
   if (checking) {
     return (
       <div className="min-h-screen bg-surface-canvas flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 rounded-full border-2 border-brand border-t-transparent" />
+        <Spinner size="lg" />
       </div>
     );
   }

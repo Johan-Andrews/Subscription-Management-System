@@ -1,16 +1,34 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/AuthContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Spinner } from '../../components/Spinner';
 import { MailCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const ForgotPasswordPage = () => {
+  const { session, user, loading, role, roleHome } = useAuth();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+
+  // While auth session is loading, show Spinner
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  // If already signed in, redirect to role home
+  if (session && user) {
+    const home = roleHome || (role === 'CUSTOMER' ? '/portal/profile' : '/customers');
+    return <Navigate to={home} replace />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +39,7 @@ export const ForgotPasswordPage = () => {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       const redirectUrl = `${window.location.origin}/reset-password`;
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
@@ -37,7 +55,7 @@ export const ForgotPasswordPage = () => {
       setError(msg);
       toast.error(msg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -93,7 +111,7 @@ export const ForgotPasswordPage = () => {
 
               <Button
                 type="submit"
-                loading={loading}
+                loading={submitting}
                 className="w-full mt-2"
               >
                 Send reset link
